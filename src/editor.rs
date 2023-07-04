@@ -1,46 +1,84 @@
 use std::io;
-use std::io::stdout;
-use termion::raw::IntoRawMode;
-use termion::input::TermRead;
+use std::io::Write;
 use termion::event::Key;
 
+use crate::Terminal;
 
-//legacy
-fn to_ctrl_byte(c: char) -> u8 {
-    let byte = c as u8;
-    byte & 0b0001_1111
-}
 
 fn die(error: std::io::Error) {
+    println!("{}", termion::clear::All);
     panic!("{}", error);
 }
+
 
 enum Mode {
     Breit,
     Bereit,
 }
 
+
+struct Position {
+    x: usize,
+    y: usize,
+}
+
+
 pub struct Editor {
     mode: Mode,
+    should_quit: bool,
+    terminal: Terminal,
 }
 
 impl Editor {
     pub fn default() -> Self{
-        Self{mode: Mode::Bereit}
+        Self {
+            mode: Mode::Bereit,
+            should_quit: false,
+            terminal: Terminal::default().expect("wo terminal"),
+        }
     }
 
-    pub fn run(&self) {
-        let _stdout_raw_mode = stdout().into_raw_mode().unwrap();
-
-        for key_result in io::stdin().keys() {
-            match key_result {
-                Ok(key) => match key {
-                    Key::Char(c) => println!("{}\r", c),
-                    Key::Ctrl('q') => break,
-                    _ => println!("{:?}\r", key),
-                    },
-                Err(err) => die(err),
+    pub fn run(&mut self) {
+        loop {
+            if let Err(error) = self.draw_screen() {
+                die(error);
             }
+            if self.should_quit {
+                break;
+            }
+            if let Err(error) = self.process_keypress() {
+                die(error);
+            }
+        }
+    }
+
+    fn process_keypress(&mut self) -> Result<(), std::io::Error> {
+        let pressed_key = self.terminal.read_key();
+        match pressed_key {
+            Ok(key) => match key {
+                Key::Char(c) => println!("{}\r", c),
+                Key::Ctrl('q') => self.should_quit = true,
+                _ => println!("{:?}\r", key),
+                },
+            Err(err) => die(err),
+        }
+        Ok(())
+    }
+
+    fn draw_screen(&self) -> Result<(), std::io::Error> {
+        self.terminal.clear_screen();
+        if self.should_quit {
+            println!(" tschö mit ö\r")
+        } else {
+            self.draw_rows();
+            self.terminal.cursor_pos(0, 0);
+        }
+        io::stdout().flush()
+    }
+    
+    fn draw_rows(&self) {
+        for _ in 0..self.terminal.size().height {
+            println!("~\r");
         }
     }
 }
