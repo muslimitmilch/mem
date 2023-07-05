@@ -4,6 +4,9 @@ use termion::event::Key;
 
 use crate::Terminal;
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+
 
 fn die(error: std::io::Error) {
     println!("{}", termion::clear::All);
@@ -72,6 +75,7 @@ impl Editor {
         } else {
             self.terminal.hide_cursor();
             self.draw_rows();
+            self.draw_bottom_line();
             self.terminal.cursor_pos(0, 0);
             self.terminal.show_cursor();
         }
@@ -83,5 +87,19 @@ impl Editor {
            self. terminal.clear_line();
             println!("~\r");
         }
+    }
+
+    fn draw_bottom_line(&self) {
+        let max_width = self.terminal.size().width as usize;
+        let left_text = match &self.mode {
+            breit => format!(" breit"),
+            bereit => format!(" bereit"),
+        };
+        let middle_text = format!("{}", VERSION);
+        let right_text = format!("mem_editor");
+        let padding_len = max_width - left_text.len() - middle_text.len() - right_text.len();
+        let padding = " ".repeat(padding_len / 2);
+        let whole_line = format!("{}{}{}{}{}", left_text, padding, middle_text, padding, right_text);
+        print!("{}", whole_line);
     }
 }
