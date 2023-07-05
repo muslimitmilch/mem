@@ -66,18 +66,21 @@ impl Editor {
     }
 
     fn draw_screen(&self) -> Result<(), std::io::Error> {
-        self.terminal.clear_screen();
         if self.should_quit {
+            self.terminal.clear_screen();
             println!(" tschö mit ö\r")
         } else {
+            self.terminal.hide_cursor();
             self.draw_rows();
             self.terminal.cursor_pos(0, 0);
+            self.terminal.show_cursor();
         }
         io::stdout().flush()
     }
     
     fn draw_rows(&self) {
-        for _ in 0..self.terminal.size().height {
+        for _ in 0..self.terminal.size().height - 1 {
+           self. terminal.clear_line();
             println!("~\r");
         }
     }

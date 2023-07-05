@@ -14,7 +14,7 @@ pub struct Size {
 
 pub struct Terminal {
     size: Size,
-    _raw_mode: RawTerminal<std::io::Stdout>
+    _raw_mode: RawTerminal<std::io::Stdout>,
 }
 
 impl Terminal {
@@ -30,15 +30,19 @@ impl Terminal {
     }
 
     pub fn clear_screen(&self) {
-        println!("{}", termion::clear::All);
+        print!("{}", termion::clear::All);
     }
 
-    pub fn size(&self) -> (&Size) {
+    pub fn clear_line(&self) {
+        print!("{}", termion::clear::CurrentLine);
+    }
+
+    pub fn size(&self) -> &Size {
         &self.size
     }
 
     pub fn cursor_pos(&self, x: u16, y: u16) {
-        println!("{}", termion::cursor::Goto(x + 1, y + 1));
+        print!("{}", termion::cursor::Goto(x + 1, y + 1));
     }
 
     pub fn flush(&self) {
@@ -51,5 +55,13 @@ impl Terminal {
                 return key;
             }
         }
+    }
+
+    pub fn show_cursor(&self) {
+        print!("{}", termion::cursor::Show);
+    }
+
+    pub fn hide_cursor(&self) {
+        print!("{}", termion::cursor::Hide);
     }
 }
