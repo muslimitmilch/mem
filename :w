@@ -33,7 +33,6 @@ pub struct Editor {
     should_quit: bool,
     terminal: Terminal,
     document: Document,
-    doc_pos: Position,
 }
 
 impl Editor {
@@ -42,8 +41,7 @@ impl Editor {
             mode: Mode::Bereit,
             should_quit: false,
             terminal: Terminal::default().expect("wo terminal"),
-            document: Document::open(),
-            doc_pos: Position::default(),
+            document: Document::default(),
         }
     }
 
@@ -82,22 +80,16 @@ impl Editor {
             self.terminal.hide_cursor();
             self.draw_rows();
             self.draw_bottom_line();
-            self.terminal.show_cursor();
             self.terminal.cursor_pos(0, 0);
+            self.terminal.show_cursor();
         }
         io::stdout().flush()
     }
     
     fn draw_rows(&self) {
-        let mut height = self.terminal.size().height -1;
-        for line in self.document.rows() {
-           self.terminal.clear_line();
-           println!("{}\r", line.string());
-           height = height - 1
-        }
-        for _ in 0..height {
-           self.terminal.clear_line();
-           println!("~\r");
+        for _ in 0..self.terminal.size().height - 1 {
+           self. terminal.clear_line();
+            println!("~\r");
         }
     }
 
