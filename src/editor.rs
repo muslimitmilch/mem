@@ -65,7 +65,7 @@ impl Editor {
         let pressed_key = self.terminal.read_key();
         match pressed_key {
             Ok(key) => match key {
-                Key::Char(c) => println!("{}\r", c),
+                Key::Char(c) => (), //tbc
                 Key::Ctrl('q') => self.should_quit = true,
                 _ => println!("{:?}\r", key),
                 },

@@ -10,8 +10,12 @@ impl Document {
         Self {rows}
     }
 
+    pub fn row(&self, index: usize) -> &Row {
+       &self.rows[index]
+    }
+
     pub fn rows(&self) -> &Vec<Row> {
-       &self.rows 
+       &self.rows
     }
 }
 
