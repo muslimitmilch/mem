@@ -135,7 +135,7 @@ impl Editor {
             bereit => format!(" bereit"),
         };
         let middle_text = self.document.file_name();
-        let right_text = format!("{}", VERSION);
+        let right_text = format!("mem {}", VERSION);
         let padding_len =
             max_width -
             left_text.len() -
@@ -155,16 +155,25 @@ impl Editor {
 
     fn handle_key_command(&mut self, key: Key) {
         match key {
+            //Key::Char('h') => self.command_left(),
             Key::Char('j') => self.command_down(),
+            Key::Char('k') => self.command_up(),
+            //Key::Char('l') => self.command_right(),
             _ => (),
         }
     }
 
     fn command_down(&mut self) {
-        let cpid = &self.cursor_pos_in_doc.y;
-        match self.document.row(*cpid + 1) {
+        let cpid = self.cursor_pos_in_doc.y;
+        match self.document.row(cpid + 1) {
             Some(row) => self.cursor_pos_in_doc.y += 1,
             _ => (),
         }
+    }
+
+    fn command_up(&mut self) {
+        if self.cursor_pos_in_doc.y != 0 {
+            self.cursor_pos_in_doc.y -= 1;
+        };
     }
 }
