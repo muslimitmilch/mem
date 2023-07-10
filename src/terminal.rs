@@ -20,6 +20,7 @@ pub struct Terminal {
 impl Terminal {
     pub fn default() -> Result<Self, std::io::Error> {
         let size = termion::terminal_size()?;
+        Self::clear_screen();
         Ok(Self {
             size: Size {
                 width: size.0 as usize,
@@ -29,11 +30,11 @@ impl Terminal {
         })
     }
 
-    pub fn clear_screen(&self) {
+    pub fn clear_screen() {
         print!("{}", termion::clear::All);
     }
 
-    pub fn clear_line(&self) {
+    pub fn clear_line() {
         print!("{}", termion::clear::CurrentLine);
     }
 
@@ -41,10 +42,10 @@ impl Terminal {
         &self.size
     }
 
-    pub fn cursor_pos(&self, mut x: usize, mut y: usize) {
-        let x_small = x as u16;
-        let y_small = y as u16;
-        print!("{}", termion::cursor::Goto(x_small + 1, y_small + 1));
+    pub fn cursor_pos(&self, x: usize, y: usize) {
+        let x = x as u16;
+        let y = y as u16;
+        print!("{}", termion::cursor::Goto(x + 1, y + 1));
     }
 
     pub fn flush(&self) {

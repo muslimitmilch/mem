@@ -29,13 +29,22 @@ struct Position {
 }
 
 
+
+#[derive(Default)]
+struct ScreenExerpt {
+    begin: Position,
+    end: Position,
+}
+
+
+
 pub struct Editor {
     mode: Mode,
     should_quit: bool,
     terminal: Terminal,
     document: Document,
     cursor_pos_in_doc: Position,
-    cursor_y_on_screen: usize,
+    screen_excerpt: ScreenExerpt,
 }
 
 impl Editor {
@@ -53,7 +62,7 @@ impl Editor {
             terminal: Terminal::default().expect("wo terminal"),
             document,
             cursor_pos_in_doc: Position::default(),
-            cursor_y_on_screen: 0,
+            screen_excerpt: ScreenExerpt::default(),
         }
     }
 
@@ -75,36 +84,46 @@ impl Editor {
         let pressed_key = self.terminal.read_key();
         match pressed_key {
             Ok(key) => match key {
-                Key::Char(c) => (), //tbc
                 Key::Ctrl('q') => self.should_quit = true,
-                _ => println!("{:?}\r", key),
+                _ => self.handle_key_command(key),
                 },
             Err(err) => die(err),
         }
         Ok(())
     }
 
-    fn draw_screen(&self) -> Result<(), std::io::Error> {
+    fn draw_screen(&mut self) -> Result<(), std::io::Error> {
         if self.should_quit {
-            self.terminal.clear_screen();
+            Terminal::clear_screen();
             println!(" tschö mit ö\r")
         } else {
-            self.terminal.hide_cursor();
-            self.draw_rows(self.terminal.size().height - 1);
-            self.draw_bottom_line();
-            self.terminal.show_cursor();
             self.terminal.cursor_pos(0, 0);
+            self.terminal.hide_cursor();
+            self.get_screen_excerpt();
+            self.draw_rows();
+            self.draw_bottom_line();
+            let cpid = &self.cursor_pos_in_doc;
+            self.terminal.cursor_pos(cpid.x, cpid.y);
         }
+        self.terminal.show_cursor();
         io::stdout().flush()
     }
+
+    fn get_screen_excerpt(&mut self) {
+        self.screen_excerpt.end.y =
+        self.screen_excerpt.begin.y +
+        self.terminal.size().height - 1;
+    }
     
-    fn draw_rows(&self, height: usize) {
-        for y in 0..height {
+    fn draw_rows(&self) {
+        for y in self.screen_excerpt.begin.y ..
+            self.screen_excerpt.end.y {
             let option_row = self.document.row(y);
             let string = match option_row {
                 Some(row) => row.render(),
                 None => "~".to_string(),
             };
+            Terminal::clear_line;
             println!("{}\r", string);
         }
     }
@@ -132,5 +151,20 @@ impl Editor {
             right_text
             );
         print!("{}", whole_line);
+    }
+
+    fn handle_key_command(&mut self, key: Key) {
+        match key {
+            Key::Char('j') => self.command_down(),
+            _ => (),
+        }
+    }
+
+    fn command_down(&mut self) {
+        let cpid = &self.cursor_pos_in_doc.y;
+        match self.document.row(*cpid + 1) {
+            Some(row) => self.cursor_pos_in_doc.y += 1,
+            _ => (),
+        }
     }
 }
