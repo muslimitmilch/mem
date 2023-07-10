@@ -1,4 +1,5 @@
 use std::io;
+use std::env;
 use std::io::Write;
 use termion::event::Key;
 
@@ -33,17 +34,26 @@ pub struct Editor {
     should_quit: bool,
     terminal: Terminal,
     document: Document,
-    doc_pos: Position,
+    cursor_pos_in_doc: Position,
+    cursor_y_on_screen: usize,
 }
 
 impl Editor {
     pub fn default() -> Self{
+        let args: Vec<String> = env::args().collect();
+        let document = if args.len() > 1 {
+            let file_name = &args[1];
+            Document::open(&file_name).unwrap_or_default()
+        } else {
+            Document::default()
+        };
         Self {
             mode: Mode::Bereit,
             should_quit: false,
             terminal: Terminal::default().expect("wo terminal"),
-            document: Document::open(),
-            doc_pos: Position::default(),
+            document,
+            cursor_pos_in_doc: Position::default(),
+            cursor_y_on_screen: 0,
         }
     }
 
@@ -80,7 +90,7 @@ impl Editor {
             println!(" tschö mit ö\r")
         } else {
             self.terminal.hide_cursor();
-            self.draw_rows();
+            self.draw_rows(self.terminal.size().height - 1);
             self.draw_bottom_line();
             self.terminal.show_cursor();
             self.terminal.cursor_pos(0, 0);
@@ -88,16 +98,14 @@ impl Editor {
         io::stdout().flush()
     }
     
-    fn draw_rows(&self) {
-        let mut height = self.terminal.size().height -1;
-        for line in self.document.rows() {
-           self.terminal.clear_line();
-           println!("{}\r", line.string());
-           height = height - 1
-        }
-        for _ in 0..height {
-           self.terminal.clear_line();
-           println!("~\r");
+    fn draw_rows(&self, height: usize) {
+        for y in 0..height {
+            let option_row = self.document.row(y);
+            let string = match option_row {
+                Some(row) => row.render(),
+                None => "~".to_string(),
+            };
+            println!("{}\r", string);
         }
     }
 
@@ -107,11 +115,22 @@ impl Editor {
             breit => format!(" breit"),
             bereit => format!(" bereit"),
         };
-        let middle_text = format!("{}", VERSION);
-        let right_text = format!("mem_editor");
-        let padding_len = max_width - left_text.len() - middle_text.len() - right_text.len();
+        let middle_text = self.document.file_name();
+        let right_text = format!("{}", VERSION);
+        let padding_len =
+            max_width -
+            left_text.len() -
+            middle_text.len() -
+            right_text.len();
         let padding = " ".repeat(padding_len / 2);
-        let whole_line = format!("{}{}{}{}{}", left_text, padding, middle_text, padding, right_text);
+        let whole_line =
+            format!("{}{}{}{}{}",
+            left_text,
+            padding,
+            middle_text,
+            padding,
+            right_text
+            );
         print!("{}", whole_line);
     }
 }

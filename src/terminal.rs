@@ -8,8 +8,8 @@ use termion::raw::RawTerminal;
 
 
 pub struct Size {
-    pub height: u16,
-    pub width: u16,
+    pub height: usize,
+    pub width: usize,
 }
 
 pub struct Terminal {
@@ -22,8 +22,8 @@ impl Terminal {
         let size = termion::terminal_size()?;
         Ok(Self {
             size: Size {
-                width: size.0,
-                height: size.1,
+                width: size.0 as usize,
+                height: size.1 as usize,
             },
             _raw_mode: stdout().into_raw_mode().unwrap(),
         })
@@ -41,8 +41,10 @@ impl Terminal {
         &self.size
     }
 
-    pub fn cursor_pos(&self, x: u16, y: u16) {
-        print!("{}", termion::cursor::Goto(x + 1, y + 1));
+    pub fn cursor_pos(&self, mut x: usize, mut y: usize) {
+        let x_small = x as u16;
+        let y_small = y as u16;
+        print!("{}", termion::cursor::Goto(x_small + 1, y_small + 1));
     }
 
     pub fn flush(&self) {
