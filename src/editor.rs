@@ -30,21 +30,13 @@ struct Position {
 
 
 
-#[derive(Default)]
-struct ScreenExerpt {
-    begin: Position,
-    end: Position,
-}
-
-
-
 pub struct Editor {
     mode: Mode,
     should_quit: bool,
     terminal: Terminal,
     document: Document,
     cursor_pos_in_doc: Position,
-    screen_excerpt: ScreenExerpt,
+    scroll: Position,
 }
 
 impl Editor {
@@ -62,7 +54,7 @@ impl Editor {
             terminal: Terminal::default().expect("wo terminal"),
             document,
             cursor_pos_in_doc: Position::default(),
-            screen_excerpt: ScreenExerpt::default(),
+            scroll: Position::default(),
         }
     }
 
@@ -81,7 +73,7 @@ impl Editor {
     }
 
     fn process_keypress(&mut self) -> Result<(), std::io::Error> {
-        let pressed_key = self.terminal.read_key();
+        let pressed_key = Terminal::read_key();
         match pressed_key {
             Ok(key) => match key {
                 Key::Ctrl('q') => self.should_quit = true,
@@ -97,33 +89,26 @@ impl Editor {
             Terminal::clear_screen();
             println!(" tschö mit ö\r")
         } else {
-            self.terminal.cursor_pos(0, 0);
-            self.terminal.hide_cursor();
-            self.get_screen_excerpt();
+            self.terminal.set_size();
+            Terminal::cursor_pos(0, 0);
+            let position = self.position_cursor();
+            Terminal::hide_cursor();
             self.draw_rows();
             self.draw_bottom_line();
-            let cpid = &self.cursor_pos_in_doc;
-            self.terminal.cursor_pos(cpid.x, cpid.y);
+            Terminal::cursor_pos(position.x, position.y);
         }
-        self.terminal.show_cursor();
+        Terminal::show_cursor();
         io::stdout().flush()
     }
 
-    fn get_screen_excerpt(&mut self) {
-        self.screen_excerpt.end.y =
-        self.screen_excerpt.begin.y +
-        self.terminal.size().height - 1;
-    }
-    
     fn draw_rows(&self) {
-        for y in self.screen_excerpt.begin.y ..
-            self.screen_excerpt.end.y {
+        for y in self.scroll.y .. self.scroll.y + self.terminal.size().height - 1 {
             let option_row = self.document.row(y);
             let string = match option_row {
                 Some(row) => row.render(),
                 None => "~".to_string(),
             };
-            Terminal::clear_line;
+            Terminal::clear_line();
             println!("{}\r", string);
         }
     }
@@ -153,6 +138,19 @@ impl Editor {
         print!("{}", whole_line);
     }
 
+    fn position_cursor(&mut self) -> Position {
+        dbg!(self.terminal.size().height);
+        if self.cursor_pos_in_doc.y >
+            self.scroll.y + self.terminal.size().height - 2 {
+            self.scroll.y += 1;
+        } else if self.cursor_pos_in_doc.y < self.scroll.y {
+            self.scroll.y -= 1;
+        }
+        Position {
+            x: 0,
+            y: self.cursor_pos_in_doc.y - self.scroll.y}
+    }
+
     fn handle_key_command(&mut self, key: Key) {
         match key {
             //Key::Char('h') => self.command_left(),
@@ -160,7 +158,7 @@ impl Editor {
             Key::Char('k') => self.command_up(),
             //Key::Char('l') => self.command_right(),
             _ => (),
-        }
+        };
     }
 
     fn command_down(&mut self) {

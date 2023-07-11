@@ -7,6 +7,7 @@ use termion::raw::IntoRawMode;
 use termion::raw::RawTerminal;
 
 
+#[derive(Default)]
 pub struct Size {
     pub height: usize,
     pub width: usize,
@@ -19,15 +20,24 @@ pub struct Terminal {
 
 impl Terminal {
     pub fn default() -> Result<Self, std::io::Error> {
-        let size = termion::terminal_size()?;
         Self::clear_screen();
         Ok(Self {
-            size: Size {
-                width: size.0 as usize,
-                height: size.1 as usize,
-            },
+            size: Size::default(),
             _raw_mode: stdout().into_raw_mode().unwrap(),
         })
+    }
+
+    pub fn set_size(&mut self) {
+        let terminal_size = termion::terminal_size()
+            .expect("wo terminal size");
+        self.size = Size {
+            width: terminal_size.0 as usize,
+            height: terminal_size.1 as usize,
+        }
+    }
+
+    pub fn size(&self) -> &Size {
+        &self.size
     }
 
     pub fn clear_screen() {
@@ -38,21 +48,17 @@ impl Terminal {
         print!("{}", termion::clear::CurrentLine);
     }
 
-    pub fn size(&self) -> &Size {
-        &self.size
-    }
-
-    pub fn cursor_pos(&self, x: usize, y: usize) {
+    pub fn cursor_pos(x: usize, y: usize) {
         let x = x as u16;
         let y = y as u16;
         print!("{}", termion::cursor::Goto(x + 1, y + 1));
     }
 
-    pub fn flush(&self) {
+    pub fn flush() {
         io::stdout().flush().expect("error flushing stdout");
     }
 
-    pub fn read_key(&self) -> Result<Key, std::io::Error> {
+    pub fn read_key() -> Result<Key, std::io::Error> {
         loop {
             if let Some(key) = io::stdin().lock().keys().next() {
                 return key;
@@ -60,11 +66,11 @@ impl Terminal {
         }
     }
 
-    pub fn show_cursor(&self) {
+    pub fn show_cursor() {
         print!("{}", termion::cursor::Show);
     }
 
-    pub fn hide_cursor(&self) {
+    pub fn hide_cursor() {
         print!("{}", termion::cursor::Hide);
     }
 }
