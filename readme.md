@@ -1,5 +1,5 @@
 # mem
-muslimitmilch's editor modal, my first rust project ever. indended to become a small tui text editor. See [pflenker's tutorial](github.com/pflenker/hecto-tutorial) i followed.
+muslimitmilch's editor modal, my first rust project ever. indended to become a small tui text editor. See [pflenker's tutorial](https://github.com/pflenker/hecto-tutorial) i followed.
 
 # Todo
 
