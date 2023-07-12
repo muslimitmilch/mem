@@ -1,4 +1,5 @@
 use std::fs;
+use std::cmp;
 
 
 
@@ -50,10 +51,12 @@ impl Row {
         &self.string
     }
 
-    pub fn render(&self) -> String {
-        // tbc
-        //let left = cmp::min();
-        //let right = cmp::min();
-        self.string./*get(left, right).*/to_string()
+    pub fn render(&self, mut begin: usize, mut end: usize) -> String {
+        end = cmp::min(end, self.string.len());
+        begin = cmp::min(begin, end);
+        self.string
+            .get(begin..end)
+            .unwrap_or_default()
+            .to_string()
     }
 }

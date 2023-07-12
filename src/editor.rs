@@ -35,7 +35,7 @@ pub struct Editor {
     should_quit: bool,
     terminal: Terminal,
     document: Document,
-    cursor_pos_in_doc: Position,
+    cursor_pos: Position,
     scroll: Position,
 }
 
@@ -53,7 +53,7 @@ impl Editor {
             should_quit: false,
             terminal: Terminal::default().expect("wo terminal"),
             document,
-            cursor_pos_in_doc: Position::default(),
+            cursor_pos: Position::default(), //cursor pos in doc
             scroll: Position::default(),
         }
     }
@@ -96,6 +96,7 @@ impl Editor {
             self.draw_rows();
             self.draw_bottom_line();
             Terminal::cursor_pos(position.x, position.y);
+            //print!("x{} {}", position.x, self.cursor_pos.x);
         }
         Terminal::show_cursor();
         io::stdout().flush()
@@ -105,7 +106,9 @@ impl Editor {
         for y in self.scroll.y .. self.scroll.y + self.terminal.size().height - 1 {
             let option_row = self.document.row(y);
             let string = match option_row {
-                Some(row) => row.render(),
+                Some(row) => row
+                .render(self.scroll.x,
+                    self.scroll.x + self.terminal.size().width),
                 None => "~".to_string(),
             };
             Terminal::clear_line();
@@ -119,7 +122,7 @@ impl Editor {
             breit => format!(" breit"),
             bereit => format!(" bereit"),
         };
-        let middle_text = self.document.file_name();
+        let middle_text = format!("scroll x {}", self.scroll.x);//self.document.file_name();
         let right_text = format!("mem {}", VERSION);
         let padding_len =
             max_width -
@@ -139,39 +142,61 @@ impl Editor {
     }
 
     fn position_cursor(&mut self) -> Position {
-        dbg!(self.terminal.size().height);
-        if self.cursor_pos_in_doc.y >
+        if self.cursor_pos.x >
+            self.scroll.x + self.terminal.size().width - 1 {
+            self.scroll.x += 1;
+        } else if self.cursor_pos.x < self.scroll.x {
+            self.scroll.x -= 1;
+        }
+        if self.cursor_pos.y >
             self.scroll.y + self.terminal.size().height - 2 {
             self.scroll.y += 1;
-        } else if self.cursor_pos_in_doc.y < self.scroll.y {
+        } else if self.cursor_pos.y < self.scroll.y {
             self.scroll.y -= 1;
         }
         Position {
-            x: 0,
-            y: self.cursor_pos_in_doc.y - self.scroll.y}
+            x: self.cursor_pos.x - self.scroll.x,
+            y: self.cursor_pos.y - self.scroll.y,
+        }
     }
 
     fn handle_key_command(&mut self, key: Key) {
         match key {
-            //Key::Char('h') => self.command_left(),
+            Key::Char('h') => self.command_left(),
             Key::Char('j') => self.command_down(),
             Key::Char('k') => self.command_up(),
-            //Key::Char('l') => self.command_right(),
+            Key::Char('l') => self.command_right(),
             _ => (),
         };
     }
 
     fn command_down(&mut self) {
-        let cpid = self.cursor_pos_in_doc.y;
+        let cpid = self.cursor_pos.y;
         match self.document.row(cpid + 1) {
-            Some(row) => self.cursor_pos_in_doc.y += 1,
+            Some(row) => self.cursor_pos.y += 1,
+            _ => (),
+        }
+    }
+
+    fn command_right(&mut self) {
+        match self.document.row(self.cursor_pos.y) {
+            Some(row) =>
+            if self.cursor_pos.x < row.string().len() { 
+                self.cursor_pos.x += 1;
+            },
             _ => (),
         }
     }
 
     fn command_up(&mut self) {
-        if self.cursor_pos_in_doc.y != 0 {
-            self.cursor_pos_in_doc.y -= 1;
+        if self.cursor_pos.y != 0 {
+            self.cursor_pos.y -= 1;
+        };
+    }
+
+    fn command_left(&mut self) {
+        if self.cursor_pos.x != 0 {
+            self.cursor_pos.x -= 1;
         };
     }
 }
