@@ -8,3 +8,5 @@ See [pflenker's tutorial](https://github.com/pflenker/hecto-tutorial) i followed
 
 - more commands
     - editing text
+- clean up error handling
+    - decide wich errors should be propagated or simply unwrapped
