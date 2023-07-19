@@ -44,7 +44,7 @@ impl Editor {
         let args: Vec<String> = env::args().collect();
         let document = if args.len() > 1 {
             let file_name = &args[1];
-            Document::open(&file_name).unwrap_or_default()
+            Document::open(&file_name).expect("err opening file")
         } else {
             Document::default()
         };
@@ -66,22 +66,16 @@ impl Editor {
             if self.should_quit {
                 break;
             }
-            if let Err(error) = self.process_keypress() {
-                die(error);
-            }
+            self.process_keypress();
         }
     }
 
-    fn process_keypress(&mut self) -> Result<(), std::io::Error> {
-        let pressed_key = Terminal::read_key();
-        match pressed_key {
-            Ok(key) => match key {
-                Key::Ctrl('q') => self.should_quit = true,
-                _ => self.handle_key_command(key),
-                },
-            Err(err) => die(err),
-        }
-        Ok(())
+    fn process_keypress(&mut self) {
+        let key = Terminal::read_key().expect("unable to successfully read key");
+        match key {
+            Key::Ctrl('q') => self.should_quit = true,
+            _ => self.handle_key_command(key),
+        };
     }
 
     fn draw_screen(&mut self) -> Result<(), std::io::Error> {
@@ -122,7 +116,7 @@ impl Editor {
             breit => format!(" breit"),
             bereit => format!(" bereit"),
         };
-        let middle_text = format!("scroll x {}", self.scroll.x);//self.document.file_name();
+        let middle_text = format!("{}", self.document.file_name());
         let right_text = format!("mem {}", VERSION);
         let padding_len =
             max_width -
