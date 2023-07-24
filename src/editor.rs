@@ -19,6 +19,7 @@ fn die(error: std::io::Error) {
 enum Mode {
     Breit,
     Bereit,
+    Prompt,
 }
 
 
@@ -37,6 +38,7 @@ pub struct Editor {
     document: Document,
     cursor_pos: Position,
     scroll: Position,
+    prompt_string: String,
 }
 
 impl Editor {
@@ -55,6 +57,7 @@ impl Editor {
             document,
             cursor_pos: Position::default(), //cursor pos in doc
             scroll: Position::default(),
+            prompt_string: String::new(),
         }
     }
 
@@ -74,8 +77,37 @@ impl Editor {
         let key = Terminal::read_key().expect("unable to successfully read key");
         match key {
             Key::Ctrl('q') => self.should_quit = true,
-            _ => self.handle_key_command(key),
+            Key::Ctrl('a') => self.mode = Mode::Bereit,
+            Key::Ctrl('f') => {
+                self.mode = Mode::Prompt;
+                self.prompt_string = String::from("");
+            },
+            _ => match self.mode {
+                Mode::Bereit => self.handle_key_command(key),
+                Mode::Prompt => self.prompt(key),
+                Mode::Breit => self.insert_key(key),
+            }
         };
+    }
+
+    fn prompt(&mut self, key: Key) {
+        match key {
+            Key::Esc => {
+                self.mode = Mode::Bereit;
+                self.prompt_string = String::new();
+            },
+            Key::Char(c) => match c {
+                '\n' => {
+                    self.mode = Mode::Bereit;
+                    //self.evaluate_prompt;
+                },
+                _ => self.prompt_string.push(c),
+            }
+            _ => (),
+        };
+    }
+
+    fn insert_key(&self, key: Key) {
     }
 
     fn draw_screen(&mut self) -> Result<(), std::io::Error> {
@@ -111,31 +143,44 @@ impl Editor {
     }
 
     fn draw_bottom_line(&self) {
-        let max_width = self.terminal.size().width as usize;
-        let left_text = match &self.mode {
-            breit => format!(" breit"),
-            bereit => format!(" bereit"),
-        };
+        let max_width = self.terminal.size().width as usize - 1;
+        let left_text = String::from(" ") + &self.prompt_string;
         let middle_text = format!("{}", self.document.file_name());
-        let right_text = format!("mem {}", VERSION);
-        let padding_len =
-            max_width -
-            left_text.len() -
-            middle_text.len() -
-            right_text.len();
-        let padding = " ".repeat(padding_len / 2);
+        let right_text = match &self.mode {
+            Mode::Breit => format!("BREIT"),
+            Mode::Bereit => format!("BEREIT"),
+            Mode::Prompt => format!("PROMPT"),
+        };
+        //let right_text = format!("mem {}", VERSION);
+        let left_padding_len =
+            max_width / 2 -
+            left_text.len() - 
+            (middle_text.len() / 2);
+        let left_padding = " ".repeat(left_padding_len);
+        let right_padding_len = 
+            max_width / 2 -
+            right_text.len() -
+            (middle_text.len() / 2);
+        let right_padding = " ".repeat(right_padding_len);
         let whole_line =
             format!("{}{}{}{}{}",
             left_text,
-            padding,
+            left_padding,
             middle_text,
-            padding,
+            right_padding,
             right_text
             );
         print!("{}", whole_line);
     }
 
     fn position_cursor(&mut self) -> Position {
+        match self.mode {
+            Mode::Prompt => return Position {
+                x: 1 + self.prompt_string.len(),
+                y: self.terminal.size().height,
+            },
+            _ => (),
+        }
         if self.cursor_pos.x >
             self.scroll.x + self.terminal.size().width - 1 {
             self.scroll.x += 1;
@@ -167,7 +212,7 @@ impl Editor {
     fn command_down(&mut self) {
         let cpid = self.cursor_pos.y;
         match self.document.row(cpid + 1) {
-            Some(row) => self.cursor_pos.y += 1,
+            Some(_row) => self.cursor_pos.y += 1,
             _ => (),
         }
     }
