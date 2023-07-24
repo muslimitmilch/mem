@@ -99,7 +99,7 @@ impl Editor {
             Key::Char(c) => match c {
                 '\n' => {
                     self.mode = Mode::Bereit;
-                    //self.evaluate_prompt;
+                    self.evaluate_prompt();
                 },
                 _ => self.prompt_string.push(c),
             }
@@ -108,6 +108,12 @@ impl Editor {
     }
 
     fn insert_key(&self, key: Key) {
+    }
+
+    fn evaluate_prompt(&mut self) {
+        if self.prompt_string.len() == 1 {
+            self.handle_key_command(Key::Char(self.prompt_string.chars().next().unwrap()));
+        }
     }
 
     fn draw_screen(&mut self) -> Result<(), std::io::Error> {
@@ -142,7 +148,7 @@ impl Editor {
         }
     }
 
-    fn draw_bottom_line(&self) {
+    fn draw_bottom_line(&self) { // STILL ERROR PRONE
         let max_width = self.terminal.size().width as usize - 1;
         let left_text = String::from(" ") + &self.prompt_string;
         let middle_text = format!("{}", self.document.file_name());
@@ -154,10 +160,10 @@ impl Editor {
         //let right_text = format!("mem {}", VERSION);
         let left_padding_len =
             max_width / 2 -
-            left_text.len() - 
+            left_text.len() -
             (middle_text.len() / 2);
         let left_padding = " ".repeat(left_padding_len);
-        let right_padding_len = 
+        let right_padding_len =
             max_width / 2 -
             right_text.len() -
             (middle_text.len() / 2);
