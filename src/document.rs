@@ -33,6 +33,14 @@ impl Document {
     pub fn rows(&self) -> &Vec<Row> {
        &self.rows
     }
+
+    pub fn insert_char(&mut self, new_char: char, index_x: usize, index_y: usize) {
+        if index_y <= self.rows.len() {
+            self.rows[index_y].insert_char(new_char, index_x)
+        } else {
+            self.rows.push(Row::from(&new_char.to_string()))
+        }
+    }
 }
 
 
@@ -52,11 +60,36 @@ impl Row {
     }
 
     pub fn render(&self, mut begin: usize, mut end: usize) -> String {
-        end = cmp::min(end, self.string.len());
+        end = cmp::min(end, self.len());
         begin = cmp::min(begin, end);
-        self.string
-            .get(begin..end)
-            .unwrap_or_default()
-            .to_string()
+        let mut output_string = String::new();
+        for character in self.string
+            .chars()
+            .skip(begin)
+            .take(end - begin)
+        {
+            if character == '\t' {
+                output_string.push_str("    ");
+            } else {
+                output_string.push(character);
+            }
+        };
+        output_string
+    }
+
+    pub fn insert_char(&mut self, new_char: char, index: usize) {
+        let before: String = self.string
+            .chars()
+            .take(index)
+            .collect();
+        let after: String = self.string
+            .chars()
+            .skip(index)
+            .collect();
+        self.string = before + &new_char.to_string() + &after;
+    }
+
+    pub fn len(&self) -> usize {
+        self.string.chars().count()
     }
 }

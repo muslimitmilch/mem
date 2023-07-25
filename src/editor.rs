@@ -77,42 +77,41 @@ impl Editor {
         let key = Terminal::read_key().expect("unable to successfully read key");
         match key {
             Key::Ctrl('q') => self.should_quit = true,
-            Key::Ctrl('a') => self.mode = Mode::Bereit,
+            Key::Ctrl('e') => self.mode = Mode::Breit,
             Key::Ctrl('f') => {
                 self.mode = Mode::Prompt;
                 self.prompt_string = String::from("");
             },
-            _ => match self.mode {
-                Mode::Bereit => self.handle_key_command(key),
-                Mode::Prompt => self.prompt(key),
-                Mode::Breit => self.insert_key(key),
-            }
-        };
-    }
-
-    fn prompt(&mut self, key: Key) {
-        match key {
             Key::Esc => {
                 self.mode = Mode::Bereit;
                 self.prompt_string = String::new();
             },
-            Key::Char(c) => match c {
-                '\n' => {
-                    self.mode = Mode::Bereit;
-                    self.evaluate_prompt();
-                },
-                _ => self.prompt_string.push(c),
-            }
+            Key::Char(c) => match self.mode {
+                Mode::Bereit => self.handle_key_command(c),
+                Mode::Prompt => self.prompt(c),
+                Mode::Breit => self.insert_key(c),
+            },
             _ => (),
         };
     }
 
-    fn insert_key(&self, key: Key) {
+    fn prompt(&mut self, character: char) {
+        match character {
+            '\n' => {
+                self.mode = Mode::Bereit;
+                self.evaluate_prompt();
+            },
+            _ => self.prompt_string.push(character),
+        };
+    }
+
+    fn insert_key(&mut self, character: char) {
+        self.document.insert_char(character, self.cursor_pos.x, self.cursor_pos.y);
     }
 
     fn evaluate_prompt(&mut self) {
         if self.prompt_string.len() == 1 {
-            self.handle_key_command(Key::Char(self.prompt_string.chars().next().unwrap()));
+            self.handle_key_command(self.prompt_string.chars().next().unwrap());
         }
     }
 
@@ -148,7 +147,7 @@ impl Editor {
         }
     }
 
-    fn draw_bottom_line(&self) { // STILL ERROR PRONE
+    fn draw_bottom_line(&self) { // ERROR: STRING LENGTH / UNICODE
         let max_width = self.terminal.size().width as usize - 1;
         let left_text = String::from(" ") + &self.prompt_string;
         let middle_text = format!("{}", self.document.file_name());
@@ -158,12 +157,12 @@ impl Editor {
             Mode::Prompt => format!("PROMPT"),
         };
         //let right_text = format!("mem {}", VERSION);
-        let left_padding_len =
+        let left_padding_len = // UNDERFLOW
             max_width / 2 -
             left_text.len() -
             (middle_text.len() / 2);
         let left_padding = " ".repeat(left_padding_len);
-        let right_padding_len =
+        let right_padding_len = // UNDERFLOW
             max_width / 2 -
             right_text.len() -
             (middle_text.len() / 2);
@@ -176,6 +175,7 @@ impl Editor {
             right_padding,
             right_text
             );
+        Terminal::clear_line();
         print!("{}", whole_line);
     }
 
@@ -205,12 +205,12 @@ impl Editor {
         }
     }
 
-    fn handle_key_command(&mut self, key: Key) {
-        match key {
-            Key::Char('h') => self.command_left(),
-            Key::Char('j') => self.command_down(),
-            Key::Char('k') => self.command_up(),
-            Key::Char('l') => self.command_right(),
+    fn handle_key_command(&mut self, character: char) {
+        match character {
+            'h' => self.command_left(),
+            'j' => self.command_down(),
+            'k' => self.command_up(),
+            'l' => self.command_right(),
             _ => (),
         };
     }
@@ -226,7 +226,7 @@ impl Editor {
     fn command_right(&mut self) {
         match self.document.row(self.cursor_pos.y) {
             Some(row) =>
-            if self.cursor_pos.x < row.string().len() { 
+            if self.cursor_pos.x < row.len() { 
                 self.cursor_pos.x += 1;
             },
             _ => (),
