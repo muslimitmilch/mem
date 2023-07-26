@@ -6,7 +6,7 @@ use termion::event::Key;
 use crate::Document;
 use crate::Terminal;
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
+//const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 
 
@@ -89,7 +89,7 @@ impl Editor {
             Key::Char(c) => match self.mode {
                 Mode::Bereit => self.handle_key_command(c),
                 Mode::Prompt => self.prompt(c),
-                Mode::Breit => self.insert_key(c),
+                Mode::Breit => self.insert_char(c),
             },
             _ => (),
         };
@@ -105,8 +105,9 @@ impl Editor {
         };
     }
 
-    fn insert_key(&mut self, character: char) {
+    fn insert_char(&mut self, character: char) {
         self.document.insert_char(character, self.cursor_pos.x, self.cursor_pos.y);
+        self.cursor_pos.x += 1;
     }
 
     fn evaluate_prompt(&mut self) {
@@ -184,6 +185,9 @@ impl Editor {
             Mode::Prompt => return Position {
                 x: 1 + self.prompt_string.len(),
                 y: self.terminal.size().height,
+            },
+            Mode::Breit => {
+                self.cursor_pos.x = std::cmp::min(self.cursor_pos.x, self.document.row(self.cursor_pos.y).unwrap().len());
             },
             _ => (),
         }
