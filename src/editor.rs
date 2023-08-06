@@ -17,8 +17,8 @@ fn die(error: std::io::Error) {
 
 
 enum Mode {
-    Breit,
-    Bereit,
+    Insert,
+    Normal,
     Prompt,
 }
 
@@ -46,12 +46,15 @@ impl Editor {
         let args: Vec<String> = env::args().collect();
         let document = if args.len() > 1 {
             let file_name = &args[1];
-            Document::open(&file_name).expect("err opening file")
+            match Document::open(&file_name) {
+                Ok(document) => document,
+                Err(_e) => Document::default(),
+            }
         } else {
             Document::default()
         };
         Self {
-            mode: Mode::Bereit,
+            mode: Mode::Normal,
             should_quit: false,
             terminal: Terminal::default().expect("wo terminal"),
             document,
@@ -77,19 +80,18 @@ impl Editor {
         let key = Terminal::read_key().expect("unable to successfully read key");
         match key {
             Key::Ctrl('q') => self.should_quit = true,
-            Key::Ctrl('e') => self.mode = Mode::Breit,
-            Key::Ctrl('f') => {
+            Key::Char(':') => {
                 self.mode = Mode::Prompt;
                 self.prompt_string = String::from("");
             },
             Key::Esc => {
-                self.mode = Mode::Bereit;
+                self.mode = Mode::Normal;
                 self.prompt_string = String::new();
             },
             Key::Char(c) => match self.mode {
-                Mode::Bereit => self.handle_key_command(c),
+                Mode::Normal => self.handle_key_command(c),
                 Mode::Prompt => self.prompt(c),
-                Mode::Breit => self.insert_char(c),
+                Mode::Insert => self.insert_char(c),
             },
             _ => (),
         };
@@ -98,7 +100,7 @@ impl Editor {
     fn prompt(&mut self, character: char) {
         match character {
             '\n' => {
-                self.mode = Mode::Bereit;
+                self.mode = Mode::Normal;
                 self.evaluate_prompt();
             },
             _ => self.prompt_string.push(character),
@@ -153,14 +155,14 @@ impl Editor {
         let left_text = String::from(" ") + &self.prompt_string;
         let middle_text = format!("{}", self.document.file_name());
         let right_text = match &self.mode {
-            Mode::Breit => format!("BREIT"),
-            Mode::Bereit => format!("BEREIT"),
+            Mode::Insert => format!("INSERT"),
+            Mode::Normal => format!("NORMAL"),
             Mode::Prompt => format!("PROMPT"),
         };
         //let right_text = format!("mem {}", VERSION);
         let left_padding_len = // UNDERFLOW
             max_width / 2 -
-            left_text.len() -
+            left_text.chars().count() -
             (middle_text.len() / 2);
         let left_padding = " ".repeat(left_padding_len);
         let right_padding_len = // UNDERFLOW
@@ -183,11 +185,14 @@ impl Editor {
     fn position_cursor(&mut self) -> Position {
         match self.mode {
             Mode::Prompt => return Position {
-                x: 1 + self.prompt_string.len(),
+                x: 1 + self.prompt_string.chars().count(),
                 y: self.terminal.size().height,
             },
-            Mode::Breit => {
-                self.cursor_pos.x = std::cmp::min(self.cursor_pos.x, self.document.row(self.cursor_pos.y).unwrap().len());
+            Mode::Insert => {
+                self.cursor_pos.x = std::cmp::min(self.cursor_pos.x, match self.document.row(self.cursor_pos.y) {
+                    Some(row) => row.len(),
+                    None => 0,
+                },)
             },
             _ => (),
         }
@@ -211,6 +216,7 @@ impl Editor {
 
     fn handle_key_command(&mut self, character: char) {
         match character {
+            'i' => self.mode = Mode::Insert,
             'h' => self.command_left(),
             'j' => self.command_down(),
             'k' => self.command_up(),
