@@ -66,11 +66,12 @@ impl Editor {
 
     pub fn run(&mut self) {
         loop {
+            if self.should_quit {
+                println!();
+                break;
+            }
             if let Err(error) = self.draw_screen() {
                 die(error);
-            }
-            if self.should_quit {
-                break;
             }
             self.process_keypress();
         }
@@ -80,30 +81,37 @@ impl Editor {
         let key = Terminal::read_key().expect("unable to successfully read key");
         match key {
             Key::Ctrl('q') => self.should_quit = true,
-            Key::Char(':') => {
-                self.mode = Mode::Prompt;
-                self.prompt_string = String::from("");
-            },
             Key::Esc => {
                 self.mode = Mode::Normal;
                 self.prompt_string = String::new();
             },
             Key::Char(c) => match self.mode {
                 Mode::Normal => self.handle_key_command(c),
-                Mode::Prompt => self.prompt(c),
+                Mode::Prompt => self.prompt(Key::Char(c)),
                 Mode::Insert => self.insert_char(c),
+            },
+            Key::Backspace => match self.mode {
+                Mode::Prompt => self.prompt(Key::Backspace),
+                Mode::Insert => (), //to be handled
+                _ => (),
             },
             _ => (),
         };
     }
 
-    fn prompt(&mut self, character: char) {
-        match character {
-            '\n' => {
-                self.mode = Mode::Normal;
-                self.evaluate_prompt();
+    fn prompt(&mut self, key: Key) {
+        match key {
+            Key::Backspace => {
+                self.prompt_string.pop();
             },
-            _ => self.prompt_string.push(character),
+            Key::Char(c) => match c {
+                '\n' => {
+                    self.mode = Mode::Normal;
+                    self.evaluate_prompt();
+                },
+                _ => self.prompt_string.push(c),
+            },
+            _ => (),
         };
     }
 
@@ -113,8 +121,11 @@ impl Editor {
     }
 
     fn evaluate_prompt(&mut self) {
-        if self.prompt_string.len() == 1 {
-            self.handle_key_command(self.prompt_string.chars().next().unwrap());
+        let prompt = self.prompt_string.as_str();
+        let command: Vec<&str> = prompt.split_whitespace().collect();
+        match prompt {
+            "q" => self.should_quit = true,
+            _ => (),
         }
     }
 
@@ -130,7 +141,6 @@ impl Editor {
             self.draw_rows();
             self.draw_bottom_line();
             Terminal::cursor_pos(position.x, position.y);
-            //print!("x{} {}", position.x, self.cursor_pos.x);
         }
         Terminal::show_cursor();
         io::stdout().flush()
@@ -217,6 +227,10 @@ impl Editor {
     fn handle_key_command(&mut self, character: char) {
         match character {
             'i' => self.mode = Mode::Insert,
+            'ö' => {
+                self.mode = Mode::Prompt;
+                self.prompt_string = String::new();
+            },
             'h' => self.command_left(),
             'j' => self.command_down(),
             'k' => self.command_up(),

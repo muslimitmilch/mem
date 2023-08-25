@@ -21,9 +21,10 @@ pub struct Terminal {
 impl Terminal {
     pub fn default() -> Result<Self, std::io::Error> {
         Self::clear_screen();
+        let raw_mode = stdout().into_raw_mode()?;
         Ok(Self {
             size: Size::default(),
-            _raw_mode: stdout().into_raw_mode().unwrap(),
+            _raw_mode: raw_mode,
         })
     }
 
