@@ -29,6 +29,12 @@ struct Position {
     y: usize,
 }
 
+enum _ExitCode { // experiment; not implemented
+    SaveExit,
+    DelExit,
+    Save,
+    Nothing,
+}
 
 
 pub struct Editor {
@@ -66,7 +72,7 @@ impl Editor {
 
     pub fn run(&mut self) {
         loop {
-            if self.should_quit {
+            if self.should_quit  {
                 println!();
                 break;
             }
@@ -122,11 +128,13 @@ impl Editor {
 
     fn evaluate_prompt(&mut self) {
         let prompt = self.prompt_string.as_str();
-        let command: Vec<&str> = prompt.split_whitespace().collect();
+        //let command: Vec<&str> = prompt.split_whitespace().collect();
         match prompt {
             "q" => self.should_quit = true,
+            "wq" => { self.document.save().unwrap(); self.should_quit = true; },
             _ => (),
         }
+        // tbc
     }
 
     fn draw_screen(&mut self) -> Result<(), std::io::Error> {
@@ -235,6 +243,9 @@ impl Editor {
             'j' => self.command_down(),
             'k' => self.command_up(),
             'l' => self.command_right(),
+            'x' => self.document.delete_char(self.cursor_pos.x, self.cursor_pos.y),
+            'd' => self.document.delete_row(self.cursor_pos.y),
+            'o' => self.document.insert_row(self.cursor_pos.y),
             _ => (),
         };
     }

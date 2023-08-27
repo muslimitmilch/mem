@@ -1,5 +1,7 @@
 use std::fs;
 use std::cmp;
+use std::io;
+use std::io::Write;
 
 
 
@@ -22,16 +24,36 @@ impl Document {
         })
     }
 
-    pub fn row(&self, index: usize) -> Option<&Row> {
-       self.rows.get(index)
+    pub fn save(&self) -> Result<(), io::Error> {
+        let mut file = fs::File::create(&self.file_name)?;
+        for row in &self.rows {
+            file.write_all(row.to_bytes())?;
+            file.write_all(b"\n")?;
+        }
+        Ok(())
     }
 
     pub fn file_name(&self) -> &String {
         &self.file_name
     }
 
-    pub fn rows(&self) -> &Vec<Row> {
-       &self.rows
+    pub fn row(&self, index: usize) -> Option<&Row> {
+        self.rows.get(index)
+    }
+
+    pub fn delete_row(&mut self, index: usize) {
+        self.rows.remove(index);
+    }
+
+    pub fn insert_row(&mut self, index: usize) {
+        let mut new_rows: Vec<Row> = Vec::new();
+        for (i, item) in self.rows.iter().enumerate() {
+            new_rows.push(item.clone());
+            if i == index {
+                new_rows.push(Row::from(""));
+            }
+        };
+        self.rows = new_rows;
     }
 
     pub fn insert_char(&mut self, new_char: char, index_x: usize, index_y: usize) {
@@ -41,10 +63,18 @@ impl Document {
             self.rows.push(Row::from(&new_char.to_string()))
         }
     }
+
+    pub fn delete_char(&mut self, index_x: usize, index_y: usize) {
+        self.rows
+            .get_mut(index_y)
+            .unwrap()
+            .delete_char(index_x);
+    }
 }
 
 
 
+#[derive(Clone)]
 pub struct Row {
     string: String,
 }
@@ -54,9 +84,8 @@ impl Row {
         Self {string: String::from(slice)}
     }
 
-    //legacy
-    pub fn string(&self) -> &String {
-        &self.string
+    fn to_bytes(&self) -> &[u8] {
+        self.string.as_bytes()
     }
 
     pub fn render(&self, mut begin: usize, mut end: usize) -> String {
@@ -87,6 +116,18 @@ impl Row {
             .skip(index)
             .collect();
         self.string = before + &new_char.to_string() + &after;
+    }
+
+    pub fn delete_char(&mut self, index: usize) {
+        let before: String = self.string
+            .chars()
+            .take(index)
+            .collect();
+        let after: String = self.string
+            .chars()
+            .skip(index + 1)
+            .collect();
+        self.string = before + &after;
     }
 
     pub fn len(&self) -> usize {
