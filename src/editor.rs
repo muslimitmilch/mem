@@ -29,13 +29,6 @@ struct Position {
     y: usize,
 }
 
-enum _ExitCode { // experiment; not implemented
-    SaveExit,
-    DelExit,
-    Save,
-    Nothing,
-}
-
 
 pub struct Editor {
     mode: Mode,
@@ -52,12 +45,12 @@ impl Editor {
         let args: Vec<String> = env::args().collect();
         let document = if args.len() > 1 {
             let file_name = &args[1];
-            match Document::open(&file_name) {
+            match Document::open_file(&file_name) {
                 Ok(document) => document,
-                Err(_e) => Document::default(),
+                Err(_e) => Document::from("failed to open document, please specify filename with command >filename FILENAME<"),
             }
         } else {
-            Document::default()
+            Document::from("please specify filename with command >filename<")
         };
         Self {
             mode: Mode::Normal,
@@ -128,10 +121,12 @@ impl Editor {
 
     fn evaluate_prompt(&mut self) {
         let prompt = self.prompt_string.as_str();
-        //let command: Vec<&str> = prompt.split_whitespace().collect();
-        match prompt {
+        let command: Vec<&str> = prompt.split_whitespace().collect();
+        match command[0] {
             "q" => self.should_quit = true,
-            "wq" => { self.document.save().unwrap(); self.should_quit = true; },
+            "w" => if let Some(_f) = self.document.file_name() {
+                    self.document.save().unwrap();
+            },
             _ => (),
         }
         // tbc
@@ -171,13 +166,16 @@ impl Editor {
     fn draw_bottom_line(&self) { // ERROR: STRING LENGTH / UNICODE
         let max_width = self.terminal.size().width as usize - 1;
         let left_text = String::from(" ") + &self.prompt_string;
-        let middle_text = format!("{}", self.document.file_name());
+        let none_case = &String::from("no filename set");
+        let middle_text = match self.document.file_name() { // fucked up
+            Some(filename) => filename,
+            None => none_case,
+        };
         let right_text = match &self.mode {
             Mode::Insert => format!("INSERT"),
             Mode::Normal => format!("NORMAL"),
             Mode::Prompt => format!("PROMPT"),
         };
-        //let right_text = format!("mem {}", VERSION);
         let left_padding_len = // UNDERFLOW
             max_width / 2 -
             left_text.chars().count() -
@@ -244,7 +242,10 @@ impl Editor {
             'k' => self.command_up(),
             'l' => self.command_right(),
             'x' => self.document.delete_char(self.cursor_pos.x, self.cursor_pos.y),
-            'd' => self.document.delete_row(self.cursor_pos.y),
+            'd' => {
+                self.document.delete_row(self.cursor_pos.y);
+                self.cursor_pos.y = self.cursor_pos.y.saturating_sub(1);
+            },
             'o' => self.document.insert_row(self.cursor_pos.y),
             _ => (),
         };

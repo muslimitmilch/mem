@@ -5,14 +5,20 @@ use std::io::Write;
 
 
 
-#[derive(Default)]
 pub struct Document {
     rows: Vec<Row>,
-    file_name: String,
+    file_name: Option<String>,
 }
 
 impl Document {
-    pub fn open(filename: &str) -> Result<Self, std::io::Error> {
+    pub fn from(string: &str) -> Self {
+        Self {
+            rows: vec![Row::from(string)],
+            file_name: None,
+        }
+    }
+
+    pub fn open_file(filename: &str) -> Result<Self, std::io::Error> {
         let content = fs::read_to_string(filename)?;
         let mut rows = Vec::new();
         for value in content.lines() {
@@ -20,12 +26,12 @@ impl Document {
         }
         Ok(Self {
             rows,
-            file_name: filename.to_string(),
+            file_name: Some(filename.to_string()),
         })
     }
 
     pub fn save(&self) -> Result<(), io::Error> {
-        let mut file = fs::File::create(&self.file_name)?;
+        let mut file = fs::File::create(&self.file_name.clone().unwrap())?;
         for row in &self.rows {
             file.write_all(row.to_bytes())?;
             file.write_all(b"\n")?;
@@ -33,7 +39,7 @@ impl Document {
         Ok(())
     }
 
-    pub fn file_name(&self) -> &String {
+    pub fn file_name(&self) -> &Option<String> {
         &self.file_name
     }
 
@@ -43,6 +49,9 @@ impl Document {
 
     pub fn delete_row(&mut self, index: usize) {
         self.rows.remove(index);
+        if self.rows.len() == 0 {
+            self.rows = vec![Row::from("")]
+        }
     }
 
     pub fn insert_row(&mut self, index: usize) {
@@ -57,11 +66,7 @@ impl Document {
     }
 
     pub fn insert_char(&mut self, new_char: char, index_x: usize, index_y: usize) {
-        if index_y <= self.rows.len() {
-            self.rows[index_y].insert_char(new_char, index_x)
-        } else {
-            self.rows.push(Row::from(&new_char.to_string()))
-        }
+        self.rows[index_y].insert_char(new_char, index_x);
     }
 
     pub fn delete_char(&mut self, index_x: usize, index_y: usize) {
