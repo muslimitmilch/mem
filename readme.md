@@ -1,8 +1,7 @@
 # mem
 
-muslimitmilch's editor modal, my first rust project ever.
-indended to become a small tui text editor.
-see [pflenker's tutorial](https://github.com/pflenker/hecto-tutorial) i followed.
+My first Rust project ever, indended to become a small tui text editor.
+See [pflenker's tutorial](https://github.com/pflenker/hecto-tutorial) I followed.
 
 # todo
 
